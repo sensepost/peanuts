@@ -1,7 +1,6 @@
 #!/usr/bin/python
 # installer .sh file for ease of use
 # Mac last seen alerts (given with time frame, print out LAST SEEN: $Location, $LAT, $LONG, $RSSI)
-# Have Node/AngularJS with gmapjs or ngmapsjs offline to parse the csv with multiple options for import. 
 
 # TODO
 
@@ -30,16 +29,26 @@ clients = []
 macClient = []
 uni = 0
 
-
 Numclients = 0
 Numap = 0
 Currentloc = 0
+
+noise = {
+        'ff:ff:ff:ff:ff:ff',      # broadcast
+			'00:00:00:00:00:00',      # broadcast
+			'33:33:00:',              # ipv6 multicast
+			'33:33:ff:',              # spanning tree
+			'01:80:c2:00:00:00',      # multicast
+			'01:00:5e:',			# broadcast
+			'None'              
+    }
 
 NAME = 'Peanuts'
 DESCRIPTION = "A New Version of Snoopy-NG, a command line tool for logging 802.11 probe request frames"
 whmp = manuf.MacParser()
 
 gpsd = None #seting the global variable
+
 
 # Console colors
 W  = '\033[0m'  # white (normal)
@@ -95,13 +104,15 @@ def parse_args():
 
     return parser.parse_args()
 
+
 def PacketHandler(pkt):
-    if pkt.haslayer(Dot11):
-        if pkt.type==PROBE_REQUEST_TYPE and pkt.subtype == PROBE_REQUEST_SUBTYPE:
-            PrintPacketClient(pkt)
-        if args.access:   
-            if pkt.type==PROBE_REQUEST_TYPE and pkt.subtype == AP_BROADCAST_SUBTYPE:
-                PrintPacketAP(pkt)
+	if pkt.haslayer(Dot11):
+		if pkt.addr2 not in noise:
+			if pkt.type==PROBE_REQUEST_TYPE and pkt.subtype == PROBE_REQUEST_SUBTYPE:
+				PrintPacketClient(pkt)
+			if args.access:   
+				if pkt.type==PROBE_REQUEST_TYPE and pkt.subtype == AP_BROADCAST_SUBTYPE:
+					PrintPacketAP(pkt)
                 
 
 def PrintPacketAP(pkt):
@@ -268,7 +279,6 @@ if __name__=="__main__":
             p = subprocess.Popen(cmd)
             p.wait()
         intf = intf + 'mon'
-        #intf =  'mon0'
 
     if args.gpstrack:    
         gpsp = GpsPoller() # create the thread
