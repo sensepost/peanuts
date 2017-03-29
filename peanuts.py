@@ -104,6 +104,23 @@ def parse_args():
 
     return parser.parse_args()
 
+def CryptoInfo(pkt):
+    p = pkt[Dot11Elt]
+    cap = pkt.sprintf("{Dot11Beacon:%Dot11Beacon.cap%}"
+                      "{Dot11ProbeResp:%Dot11ProbeResp.cap%}").split('+')
+    crypto = ""
+    while isinstance(p, Dot11Elt):
+        if p.ID == 48:
+            crypto = "WPA2"
+        elif p.ID == 221 and p.info.startswith('\x00P\xf2\x01\x01\x00'):
+            crypto = "WPA"
+        p = p.payload
+    if not crypto:
+        if 'privacy' in cap:
+            crypto = "WEP"
+        else:
+            crypto = "OPN"
+    return crypto
 
 def PacketHandler(pkt):
 	if pkt.haslayer(Dot11):
@@ -125,13 +142,8 @@ def PrintPacketAP(pkt):
     mac = pkt.addr2
     
     gpsloc = ''
-    crypto = ''
-    cap = pkt.sprintf("{Dot11Beacon:%Dot11Beacon.cap%}"
-                      "{Dot11ProbeResp:%Dot11ProbeResp.cap%}").split('+')
-    if 'privacy' in cap:
-        crypto = "Y"
-    else:
-        crypto = "N"
+
+    crypto = CryptoInfo(pkt)
 
     if args.gpstrack:
         gpsloc = str(gpsd.fix.latitude) + ':' + str(gpsd.fix.longitude)
@@ -160,12 +172,12 @@ def PrintPacketAP(pkt):
     if ssid_probe not in accessPoints and ssid_probe != "":
         accessPoints.append(ssid_probe)
         macAP.append(mac)
-        print W+ '[' +R+ 'AP:' +C+ manufacture + W + '/' + B + mac +W+ '] [' +G+ 'SSID:' +W+ '] ' +O+ ssid_probe +W
+        print W+ '[' +R+ 'AP:' +C+ manufacture + W + '/' + B + mac +W+ '][' +T+ crypto +W+ '][' +G+ 'SSID:' +W+ '] ' +O+ ssid_probe +W
         Numap += 1
     # if ssid is in clients but mac isnt seen before then print out and add the mac to the list
     elif ssid_probe in accessPoints and mac not in macAP:
         macAP.append(mac)
-        print W+ '[' +R+ 'AP:' +C+ manufacture + W + '/' + B + mac +W+ '] [' +G+ 'SSID:' +W+ '] ' +O+ ssid_probe +W
+        print W+ '[' +R+ 'AP:' +C+ manufacture + W + '/' + B + mac +W+ '][' +T+ crypto +W+ '][' +G+ 'SSID:' +W+ '] ' +O+ ssid_probe +W
         Numap += 1
     
     logger.info(args.delimiter.join(fields))
@@ -210,11 +222,11 @@ def PrintPacketClient(pkt):
     if ssid_probe not in clients and ssid_probe != "":
         clients.append(ssid_probe)
         macClient.append(mac)
-        print W+ '[' +R+ 'Client:' +C+ manufacture + W + '/' + B + mac +W+ '] [' +G+ 'SSID:' +W+ '] ' +O+ ssid_probe +W
+        print W+ '[' +R+ 'Client:' +C+ manufacture + W + '/' + B + mac +W+ '][' +G+ 'SSID:' +W+ '] ' +O+ ssid_probe +W
     # if ssid is in clients but mac isnt seen before then print out and add the mac to the list
     elif ssid_probe in clients and mac not in macClient:
         macClient.append(mac)
-        print W+ '[' +R+ 'Client:' +C+ manufacture + W + '/' + B + mac +W+ '] [' +G+ 'SSID:' +W+ '] ' +O+ ssid_probe +W
+        print W+ '[' +R+ 'Client:' +C+ manufacture + W + '/' + B + mac +W+ '][' +G+ 'SSID:' +W+ '] ' +O+ ssid_probe +W
         Numclients += 1
     # if mac is not in the list and the probe has a broadcast (empty) then add mac to list
     elif mac not in macClient and ssid_probe == "":
