@@ -33,22 +33,11 @@ Numclients = 0
 Numap = 0
 Currentloc = 0
 
-noise = {
-        'ff:ff:ff:ff:ff:ff',      # broadcast
-			'00:00:00:00:00:00',      # broadcast
-			'33:33:00:',              # ipv6 multicast
-			'33:33:ff:',              # spanning tree
-			'01:80:c2:00:00:00',      # multicast
-			'01:00:5e:',			# broadcast
-			'None'              
-    }
-
 NAME = 'Peanuts'
 DESCRIPTION = "A New Version of Snoopy-NG, a command line tool for logging 802.11 probe request frames"
 whmp = manuf.MacParser()
 
 gpsd = None #seting the global variable
-
 
 # Console colors
 W  = '\033[0m'  # white (normal)
@@ -122,7 +111,23 @@ def CryptoInfo(pkt):
             crypto = "OPN"
     return crypto
 
+def getmac(intf):
+	mac_addr = open('/sys/class/net/%s/address' % intf).read().rstrip()
+	return mac_addr
+
 def PacketHandler(pkt):
+	global intf
+	mymac = getmac(intf)
+	noise = {
+		'ff:ff:ff:ff:ff:ff',      # broadcast
+		'00:00:00:00:00:00',      # broadcast
+		'33:33:00:',              # ipv6 multicast
+		'33:33:ff:',              # spanning tree
+		'01:80:c2:00:00:00',      # multicast
+		'01:00:5e:',			# broadcast
+		'None',
+		mymac              
+	}
 	if pkt.haslayer(Dot11):
 		if pkt.addr2 not in noise:
 			if pkt.type==PROBE_REQUEST_TYPE and pkt.subtype == PROBE_REQUEST_SUBTYPE:
@@ -172,12 +177,12 @@ def PrintPacketAP(pkt):
     if ssid_probe not in accessPoints and ssid_probe != "":
         accessPoints.append(ssid_probe)
         macAP.append(mac)
-        print W+ '[' +R+ 'AP:' +C+ manufacture + W + '/' + B + mac +W+ '][' +T+ crypto +W+ '][' +G+ 'SSID:' +W+ '] ' +O+ ssid_probe +W
+        print W+ '[' +R+ 'AP' +W+ ':' +C+ manufacture +W+ '/' +B+ mac +W+ '] [' +T+ crypto +W+ '] [' +G+ 'SSID' +W+ ': ' +O+ ssid_probe +W+ ']'
         Numap += 1
     # if ssid is in clients but mac isnt seen before then print out and add the mac to the list
     elif ssid_probe in accessPoints and mac not in macAP:
         macAP.append(mac)
-        print W+ '[' +R+ 'AP:' +C+ manufacture + W + '/' + B + mac +W+ '][' +T+ crypto +W+ '][' +G+ 'SSID:' +W+ '] ' +O+ ssid_probe +W
+        print W+ '[' +R+ 'AP' +W+ ':' +C+ manufacture +W+ '/' +B+ mac +W+ '] [' +T+ crypto +W+ '] [' +G+ 'SSID' +W+ ': ' +O+ ssid_probe +W+ ']'
         Numap += 1
     
     logger.info(args.delimiter.join(fields))
@@ -191,7 +196,7 @@ def PrintPacketClient(pkt):
     manufacture = str(whmp.get_manuf(pkt.addr2))
     mac = pkt.addr2
     gpsloc = ''
-    crypto = ''
+    crypto = 'None' #instead of being blank, client has none for crypto probe request
 
     if args.gpstrack:
         gpsloc = str(gpsd.fix.latitude) + ':' + str(gpsd.fix.longitude)
@@ -222,16 +227,16 @@ def PrintPacketClient(pkt):
     if ssid_probe not in clients and ssid_probe != "":
         clients.append(ssid_probe)
         macClient.append(mac)
-        print W+ '[' +R+ 'Client:' +C+ manufacture + W + '/' + B + mac +W+ '][' +G+ 'SSID:' +W+ '] ' +O+ ssid_probe +W
+        print W+ '[' +R+ 'Client' +W+ ':' +C+ manufacture +W+ '/' +B+ mac +W+ '] [' +G+ 'SSID' +W+ ': ' +O+ ssid_probe +W+ ']'
     # if ssid is in clients but mac isnt seen before then print out and add the mac to the list
     elif ssid_probe in clients and mac not in macClient:
         macClient.append(mac)
-        print W+ '[' +R+ 'Client:' +C+ manufacture + W + '/' + B + mac +W+ '][' +G+ 'SSID:' +W+ '] ' +O+ ssid_probe +W
+        print W+ '[' +R+ 'Client' +W+ ':' +C+ manufacture +W+ '/' +B+ mac +W+ '] [' +G+ 'SSID' +W+ ': ' +O+ ssid_probe +W+ ']'
         Numclients += 1
     # if mac is not in the list and the probe has a broadcast (empty) then add mac to list
     elif mac not in macClient and ssid_probe == "":
         macClient.append(mac)
-        print W+ '[' +R+ 'Client:' +C+ manufacture + W + '/' + B + mac +W+ '] New Client'
+        print W+ '[' +R+ 'Client' +W+ ':' +C+ manufacture +W+ '/' +B+ mac +W+ ']' +W+ ' New Client'
         Numclients += 1
 
 
@@ -268,7 +273,10 @@ def main(intf):
     print '['+G+'*'+W+'] Probe Investigator'
     print '['+G+'-----------------------------------------------------'+W+']'
 
-    sniff(iface=intf, prn=PacketHandler, store=0)
+    try:
+    	sniff(iface=intf, prn=PacketHandler, store=0)
+    except Exception, e:
+		print 'Caught exception while running sniff()',e
 
 if __name__=="__main__":
     args = parse_args()
@@ -292,8 +300,12 @@ if __name__=="__main__":
             p.wait()
         intf = intf + 'mon'
 
-    if args.gpstrack:    
-        gpsp = GpsPoller() # create the thread
+    if args.gpstrack:
+    	try:    
+        	gpsp = GpsPoller() # create the thread
+        except Exception, e:
+			print 'Caught exception while running GPS',e
+
         try:
             gpsp.start() # start it up
             main(intf)
@@ -311,10 +323,14 @@ if __name__=="__main__":
             sys.exit()
 
 print '\n \033[31m%d \033[0mClients | \033[33m%d \033[0mAPs' % (Numclients, Numap)
-# awk '!seen[$0]++' pta.log > pta.csv
-# Below code actually tidys the export and can import strait into other formats (maltego + mapping)
+
 outfile = args.output + '.csv'
-print G + '\n Creating CSV: ' + W + outfile
-with open(args.output, 'rb') as inf, open(outfile, 'wb') as outf:
-    outf.writelines(collections.OrderedDict.fromkeys(inf))
-print G + '\n Elapsed Time: ' + W + '%s' % (time.time() - start)
+
+print G + '\n Creating CSV' +W+ ': ' + outfile
+try:
+	with open(args.output, 'rb') as inf, open(outfile, 'wb') as outf:
+	    outf.writelines(collections.OrderedDict.fromkeys(inf))
+except Exception, e:
+			print 'Caught exception while creating csv',e
+
+print G + '\n Elapsed Time' +W+ ': %s' % (time.time() - start)
