@@ -73,7 +73,7 @@ def LoggingOfData(output):
 	# setup our rotating logger
 	if os.path.isfile(output) == False:
 	    f = open(output,'w')
-	    f.write('Time, Device, MAC Address, Manufacture, SSID, Crypto, GPS, Location\n')
+	    f.write('Time, Device, MAC Address, Manufacture, SSID, Crypto, GPS, Location, RSSI\n')
 	    f.close()
 	global logger 
 	logger = logging.getLogger(NAME)
@@ -163,16 +163,18 @@ def PrintPacketAP(pkt):
     fields.append(crypto) # Log SSID
     fields.append(gpsloc) # Log GPS data
     fields.append(args.location) # Log GPS data
-    ''' RSSI
+    
     try:
         extra = pkt.notdecoded
     except:
         extra = None    
     if extra!=None:
         signal_strength = -(256-ord(extra[-4:-3]))
+        fields.append(str(signal_strength)) # RSSI
     else:
         signal_strength = -100
-    '''
+        fields.append(str(signal_strength)) # RSSI
+
     # if AP ssid is not in clients and its not empty then print out, add  AP ssid and mac to lists
     if ssid_probe not in accessPoints and ssid_probe != "":
         accessPoints.append(ssid_probe)
@@ -211,18 +213,18 @@ def PrintPacketClient(pkt):
     fields.append(crypto) # Log SSID
     fields.append(gpsloc) # Log GPS data
     fields.append(args.location) # Log GPS data
-    ''' RSSI
+    
     try:
         extra = pkt.notdecoded
     except:
         extra = None	
     if extra!=None:
         signal_strength = -(256-ord(extra[-4:-3]))
-      # fields.append(str(signal_strength)) # RSSI
+        fields.append(str(signal_strength)) # RSSI
     else:
         signal_strength = -100
-      # fields.append(str(signal_strength)) # RSSI
-    '''
+        fields.append(str(signal_strength)) # RSSI
+
     # if ssid is not in clients and its not empty then print out, add ssid and mac to lists
     if ssid_probe not in clients and ssid_probe != "":
         clients.append(ssid_probe)
