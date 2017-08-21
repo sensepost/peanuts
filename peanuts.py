@@ -15,7 +15,7 @@ import datetime
 import logging
 import threading
 import collections
-import os.path
+from os import system, path, getuid, uname
 from logging.handlers import RotatingFileHandler
 
 PROBE_REQUEST_TYPE=0
@@ -109,6 +109,9 @@ def CryptoInfo(pkt):
             crypto = "WEP"
         else:
             crypto = "OPN"
+    if "0050f204104a000110104400010210" in str(pkt).encode("hex"):
+		crypto = crypto + R + " WPS"
+
     return crypto
 
 def getmac(intf):
@@ -159,32 +162,22 @@ def PrintPacketAP(pkt):
     fields.append('AP') # Log Client or AP
     fields.append(mac) # Log Mac Address
     fields.append(manufacture) # Log Device Manufacture
-    fields.append(ssid_probe) # Log SSID
+    fields.append(ssid_probe.decode("utf-8")) # Log SSID
     fields.append(crypto) # Log SSID
     fields.append(gpsloc) # Log GPS data
     fields.append(args.location) # Log GPS data
+    fields.append(str(get_rssi(pkt.notdecoded))) # RSSI
     
-    try:
-        extra = pkt.notdecoded
-    except:
-        extra = None    
-    if extra!=None:
-        signal_strength = -(256-ord(extra[-4:-3]))
-        fields.append(str(signal_strength)) # RSSI
-    else:
-        signal_strength = -100
-        fields.append(str(signal_strength)) # RSSI
-
     # if AP ssid is not in clients and its not empty then print out, add  AP ssid and mac to lists
     if ssid_probe not in accessPoints and ssid_probe != "":
         accessPoints.append(ssid_probe)
         macAP.append(mac)
-        print W+ '[' +R+ 'AP' +W+ ':' +C+ manufacture +W+ '/' +B+ mac +W+ '] [' +T+ crypto +W+ '] [' +G+ 'SSID' +W+ ': ' +O+ ssid_probe +W+ ']'
+        print W+ '[' +R+ 'AP' +W+ ':' +C+ manufacture +W+ '/' +B+ mac +W+ '] [' +T+ crypto +W+ '] [' +G+ 'SSID' +W+ ': ' +O+ ssid_probe.decode("utf-8") +W+ ']'
         Numap += 1
     # if ssid is in clients but mac isnt seen before then print out and add the mac to the list
     elif ssid_probe in accessPoints and mac not in macAP:
         macAP.append(mac)
-        print W+ '[' +R+ 'AP' +W+ ':' +C+ manufacture +W+ '/' +B+ mac +W+ '] [' +T+ crypto +W+ '] [' +G+ 'SSID' +W+ ': ' +O+ ssid_probe +W+ ']'
+        print W+ '[' +R+ 'AP' +W+ ':' +C+ manufacture +W+ '/' +B+ mac +W+ '] [' +T+ crypto +W+ '] [' +G+ 'SSID' +W+ ': ' +O+ ssid_probe.decode("utf-8") +W+ ']'
         Numap += 1
     
     logger.info(args.delimiter.join(fields))
@@ -209,31 +202,21 @@ def PrintPacketClient(pkt):
     fields.append('Client') # Log Client or AP
     fields.append(mac) # Log Mac Address
     fields.append(manufacture) # Log Device Manufacture
-    fields.append(ssid_probe) # Log SSID
+    fields.append(ssid_probe.decode("utf-8")) # Log SSID
     fields.append(crypto) # Log SSID
     fields.append(gpsloc) # Log GPS data
     fields.append(args.location) # Log GPS data
+    fields.append(str(get_rssi(pkt.notdecoded))) # RSSI
     
-    try:
-        extra = pkt.notdecoded
-    except:
-        extra = None	
-    if extra!=None:
-        signal_strength = -(256-ord(extra[-4:-3]))
-        fields.append(str(signal_strength)) # RSSI
-    else:
-        signal_strength = -100
-        fields.append(str(signal_strength)) # RSSI
-
     # if ssid is not in clients and its not empty then print out, add ssid and mac to lists
     if ssid_probe not in clients and ssid_probe != "":
         clients.append(ssid_probe)
         macClient.append(mac)
-        print W+ '[' +R+ 'Client' +W+ ':' +C+ manufacture +W+ '/' +B+ mac +W+ '] [' +G+ 'SSID' +W+ ': ' +O+ ssid_probe +W+ ']'
+        print W+ '[' +R+ 'Client' +W+ ':' +C+ manufacture +W+ '/' +B+ mac +W+ '] [' +G+ 'SSID' +W+ ': ' +O+ ssid_probe.decode("utf-8") +W+ ']'
     # if ssid is in clients but mac isnt seen before then print out and add the mac to the list
     elif ssid_probe in clients and mac not in macClient:
         macClient.append(mac)
-        print W+ '[' +R+ 'Client' +W+ ':' +C+ manufacture +W+ '/' +B+ mac +W+ '] [' +G+ 'SSID' +W+ ': ' +O+ ssid_probe +W+ ']'
+        print W+ '[' +R+ 'Client' +W+ ':' +C+ manufacture +W+ '/' +B+ mac +W+ '] [' +G+ 'SSID' +W+ ': ' +O+ ssid_probe.decode("utf-8") +W+ ']'
         Numclients += 1
     # if mac is not in the list and the probe has a broadcast (empty) then add mac to list
     elif mac not in macClient and ssid_probe == "":
@@ -243,6 +226,17 @@ def PrintPacketClient(pkt):
 
 
     logger.info(args.delimiter.join(fields))
+
+def get_rssi(extra):
+        rssi = int(-(256 - ord(extra[-2:-1])));
+
+        if rssi not in xrange(-100, 0):
+            rssi = (-(256 - ord(extra[-4:-3])));
+
+        if rssi < -100:
+            return -1;
+	return rssi;
+
 
 def getWirelessInterfacesList():
     networkInterfaces=[]        
@@ -257,6 +251,16 @@ def getWirelessInterfacesList():
                     networkInterfaces.append(line.split()[0])
     return networkInterfaces
 
+def startup_checks():
+    if getuid() != 0:
+        print R + "User is not Root."
+        sys.exit()
+
+    if uname()[0].startswith("Linux") and not "Darwin" not in uname():
+        print R + "Wrong OS."
+        sys.exit()
+	return;
+
 def main(intf):
     print O + '''
     %s______                      _       
@@ -267,8 +271,8 @@ def main(intf):
 
     \_|  \___|\__,_|_| |_|\__,_|\__|___/
     %s
-    %sRelease Date%s: 26/03/2017
-    %sRelease Version%s: V.1.0
+    %sRelease Date%s: 15/07/2017
+    %sRelease Version%s: V.1.1
     %sCode%s: stuart@sensepost.com // @NoobieDog
     %sVisit%s:  www.sensepost.com // @sensepost
     ''' %(B,C,R,W,R,W,R,W,R,W)         
@@ -284,6 +288,8 @@ if __name__=="__main__":
     args = parse_args()
     
     start = time.time()
+
+    startup_checks()
 
     LoggingOfData(args.output)
 
@@ -333,6 +339,6 @@ try:
 	with open(args.output, 'rb') as inf, open(outfile, 'wb') as outf:
 	    outf.writelines(collections.OrderedDict.fromkeys(inf))
 except Exception, e:
-			print 'Caught exception while creating csv',e
+			print R + 'Caught exception while creating CSV File',e
 
 print G + '\n Elapsed Time' +W+ ': %s' % (time.time() - start)
