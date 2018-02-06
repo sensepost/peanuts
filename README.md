@@ -65,7 +65,7 @@ gpsd -D 5 -N -n /dev/ttyUSB0
 #### Simple
 
 ``` bash
-python overwatch.py -i wlan0 -l Home -o Capture1.csv
+python peanuts.py -i wlan0 -l Home -o Capture1.csv
 ```
 
 -i Interface (Doesnt matter if not in monitor mode, the program will do it)<br />
@@ -75,7 +75,7 @@ python overwatch.py -i wlan0 -l Home -o Capture1.csv
 #### Advanced
 
 ``` bash
-python overwatch.py -i wlan0 -l home -a True -g True -o Capture1.csv
+python peanuts.py -i wlan0 -l home -a True -g True -o Capture1.csv
 ```
 
 -i Interface (Doesn't matter if not in monitor mode, the program will do it)<br />
