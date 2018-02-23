@@ -1,4 +1,4 @@
-Peanuts                                    
+Peanuts V1.8                                   
                                     
 ========
 
@@ -12,8 +12,8 @@ NOTE: Im not sure how long i will supprot this project as its a slowly dying met
 
 Changelog:
 
+    # [DONE] - Added BT support.
     # [DONE] - Add COLOR.
-    # [DONE] - Threaded
     # [DONE] - Kill threads on Ctrl+C.
     # [DONE] - Defaults added to Arguments.
     # [DONE] - GPS added
@@ -24,10 +24,11 @@ TODO:
 	# Alert on known SSID or MAC
 	# Better error correction on GPS exits or false connections
 	# Add Pause/Stop/Start functions to script.
+	# Live mapping in time
 
 **** FOR EDUCATIONAL USE! Use at your own risk. **** <br />
 
-+ Tested on: Linux 3.2.6 Ubuntu/Debian (Backtrack & Kali)<br />
++ Tested on: Linux 3.2.6 Ubuntu/Debian (Kali)<br />
 
 ## Installation:
 
@@ -36,7 +37,7 @@ TODO:
 #### Required:
 
 - Python 2.7+
-- Scapy / python-gps
+- Scapy / python-gps / python-bluez
 
 #### Installing from Source
  
@@ -44,14 +45,14 @@ TODO:
 git clone https://github.com/noobiedog/peanuts/
 cd peanuts
 pip install -r requirements.txt
-apt-get install python-gps
+apt-get install python-gps bluetooth bluez python-bluez
 ```
 
 #### Installing from Download
 
 ```bash
 pip install argparse datetime gps scapy logging
-apt-get install python-gps
+apt-get install python-gps bluetooth bluez python-bluez
 ```
 
 #### To start GPS in kali/Ubuntu (in a separate terminal window)
@@ -83,6 +84,7 @@ python peanuts.py -i wlan0 -l home -a True -g True -o Capture1.csv
 -a Include Access Points too in the results<br />
 -g Get GPS location of your device (Not tested with Nethunter, yet. Also will need GPSD running)<br />
 -o Output file name for the CSV<br />
+-b Start Bluetooth sniffing too<br />
 
 
 ## Lets See it in Action
