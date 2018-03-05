@@ -13,6 +13,7 @@ NOTE: Im not sure how long i will supprot this project as its a slowly dying met
 Changelog:
 
     # [DONE] - Added BT support.
+    # [DONE] - Added Quiet Mode
     # [DONE] - Add COLOR.
     # [DONE] - Kill threads on Ctrl+C.
     # [DONE] - Defaults added to Arguments.
@@ -28,7 +29,7 @@ TODO:
 
 **** FOR EDUCATIONAL USE! Use at your own risk. **** <br />
 
-+ Tested on: Linux 3.2.6 Ubuntu/Debian (Kali)<br />
++ Tested on: Linux 3.2.6 Ubuntu/Debian (Kali)/Rpi<br />
 
 ## Installation:
 
