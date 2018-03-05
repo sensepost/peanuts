@@ -1,5 +1,7 @@
 #!/usr/bin/python
 
+# currently no data logging fot BT devices
+
 from logging.handlers import RotatingFileHandler
 import argparse
 import sys
@@ -10,6 +12,7 @@ from scapy.all import *
 conf.verb = 0
 import datetime
 import logging
+import threading
 import collections
 from os import system, path, getuid, uname
 
@@ -87,6 +90,7 @@ def parse_args():
     parser.add_argument('-l', '--location', default='None', help="Location of survey")
     parser.add_argument('-a', '--access', default=False, help="Include AP's into the survey")
     parser.add_argument('-b', '--bt', default=False, help="Scans BT Devices too (will need a BT dongle)")
+    parser.add_argument('-q', '--quiet', default=False, help="Quiet Mode (Stops all output to screen")
 
     return parser.parse_args()
 
@@ -140,7 +144,8 @@ def PacketHandler(pkt):
         try:
             btscanning()
         except Exception, e:
-            print 'Caught exception while running BT Sniffing',e
+            if not args.quiet:
+                print 'Caught exception while running BT Sniffing',e
 
 def PrintPacketAP(pkt):
     global Numap, Currentloc
@@ -178,12 +183,14 @@ def PrintPacketAP(pkt):
     if ssid_probe not in accessPoints and ssid_probe != "":
         accessPoints.append(ssid_probe)
         macAP.append(mac)
-        print W+ '[' +R+ 'AP' +W+ ':' +C+ manufacture +W+ '/' +B+ mac +W+ '] [' +T+ crypto +W+ '] [' +G+ 'SSID' +W+ ': ' +O+ ssid_probe.decode("utf-8") +W+ '] [' +P+ 'RSSI' +W+ ':' +T+ rssival +W+ ']'
+        if not args.quiet:
+            print W+ '[' +R+ 'AP' +W+ ':' +C+ manufacture +W+ '/' +B+ mac +W+ '] [' +T+ crypto +W+ '] [' +G+ 'SSID' +W+ ': ' +O+ ssid_probe.decode("utf-8") +W+ '] [' +P+ 'RSSI' +W+ ':' +T+ rssival +W+ ']'
         Numap += 1
     # if ssid is in clients but mac isnt seen before then print out and add the mac to the list
     elif ssid_probe in accessPoints and mac not in macAP:
         macAP.append(mac)
-        print W+ '[' +R+ 'AP' +W+ ':' +C+ manufacture +W+ '/' +B+ mac +W+ '] [' +T+ crypto +W+ '] [' +G+ 'SSID' +W+ ': ' +O+ ssid_probe.decode("utf-8") +W+ '] [' +P+ 'RSSI' +W+ ':' +T+ rssival +W+ ']'
+        if not args.quiet:
+            print W+ '[' +R+ 'AP' +W+ ':' +C+ manufacture +W+ '/' +B+ mac +W+ '] [' +T+ crypto +W+ '] [' +G+ 'SSID' +W+ ': ' +O+ ssid_probe.decode("utf-8") +W+ '] [' +P+ 'RSSI' +W+ ':' +T+ rssival +W+ ']'
         Numap += 1
     
     logger.info(args.delimiter.join(fields))
@@ -223,16 +230,19 @@ def PrintPacketClient(pkt):
     if ssid_probe not in clients and ssid_probe != "":
         clients.append(ssid_probe)
         macClient.append(mac)
-        print W+ '[' +R+ 'Client' +W+ ':' +C+ manufacture +W+ '/' +B+ mac +W+ '] [' +G+ 'SSID' +W+ ': ' +O+ ssid_probe.decode("utf-8") +W+ '] [' +P+ 'RSSI' +W+ ':' +T+ rssival +W+ ']'
+        if not args.quiet:
+            print W+ '[' +R+ 'Client' +W+ ':' +C+ manufacture +W+ '/' +B+ mac +W+ '] [' +G+ 'SSID' +W+ ': ' +O+ ssid_probe.decode("utf-8") +W+ '] [' +P+ 'RSSI' +W+ ':' +T+ rssival +W+ ']'
     # if ssid is in clients but mac isnt seen before then print out and add the mac to the list
     elif ssid_probe in clients and mac not in macClient:
         macClient.append(mac)
-        print W+ '[' +R+ 'Client' +W+ ':' +C+ manufacture +W+ '/' +B+ mac +W+ '] [' +G+ 'SSID' +W+ ': ' +O+ ssid_probe.decode("utf-8") +W+ '] [' +P+ 'RSSI' +W+ ':' +T+ rssival +W+ ']'
+        if not args.quiet:
+            print W+ '[' +R+ 'Client' +W+ ':' +C+ manufacture +W+ '/' +B+ mac +W+ '] [' +G+ 'SSID' +W+ ': ' +O+ ssid_probe.decode("utf-8") +W+ '] [' +P+ 'RSSI' +W+ ':' +T+ rssival +W+ ']'
         Numclients += 1
     # if mac is not in the list and the probe has a broadcast (empty) then add mac to list
     elif mac not in macClient and ssid_probe == "":
         macClient.append(mac)
-        print W+ '[' +R+ 'Client' +W+ ':' +C+ manufacture +W+ '/' +B+ mac +W+ '] [' +GR+ '*New Client*' +W+ '] [' +P+ 'RSSI' +W+ ':' +T+ rssival +W+ ']'
+        if not args.quiet:
+            print W+ '[' +R+ 'Client' +W+ ':' +C+ manufacture +W+ '/' +B+ mac +W+ '] [' +GR+ '*New Client*' +W+ '] [' +P+ 'RSSI' +W+ ':' +T+ rssival +W+ ']'
         Numclients += 1
 
     logger.info(args.delimiter.join(fields))
@@ -261,16 +271,19 @@ def getWirelessInterfacesList():
 
 def startup_checks():
     if getuid() != 0:
-        print R + "User is not Root."
+        if not args.quiet:
+            print R + "User is not Root."
         sys.exit()
 
     if uname()[0].startswith("Linux") and not "Darwin" not in uname():
-        print R + "Wrong OS."
+        if not args.quiet:
+            print R + "Wrong OS."
         sys.exit()
 	return;
 
 def logo():
-    print O + '''
+    if not args.quiet:
+        print O + '''
     %s______                      _       
     | ___ \                    | |      
     | |_/ /__  __ _ _ __  _   _| |_ ___ 
@@ -284,22 +297,49 @@ def logo():
     %sCode%s: stuart@sensepost.com // @NoobieDog
     %sVisit%s:  www.sensepost.com // @sensepost
     ''' %(B,C,R,W,R,W,R,W,R,W)         
-    print '['+G+'*'+W+'] Wifi and BT Probe Investigator'
-    print '['+G+'-----------------------------------------------------'+W+']'
+        print '['+G+'*'+W+'] Wifi and BT Probe Investigator'
+        print '['+G+'-----------------------------------------------------'+W+']'
 
 def main(intf):
     try:
         sniff(iface=intf, prn=PacketHandler, store=0)
     except Exception, e:
-        print 'Caught exception while running sniff()',e
+        if not args.quiet:
+            print 'Caught exception while running sniff()',e
 
 def btscanning():
+	ts = time.time()
+    st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M')
+
+    if args.gpstrack:
+        gpslat = str(gpsd.fix.latitude)
+        gpslong = str(gpsd.fix.longitude)
+    else:
+        gpslat = "nil"
+        gpslong = "nil"
+
+    # Logging info
+    fields = []
+    fields.append(st) # Log Time
+    fields.append('BT') # Log Client or AP
+    fields.append(addr) # Log Mac Address
+    fields.append('nil') # Log Device Manufacture
+    fields.append(name) # Log BT Name
+    fields.append('nil') # Log Crypto
+    fields.append(gpslat) # Log GPS data
+    fields.append(gpslong) # Log GPS data
+    fields.append(args.location) # Log Location data
+    fields.append('nil') # RSSI
+
     devices = bluetooth.discover_devices(duration=1, lookup_names = True)
 
     for addr, name in devices:
         if addr not in btclients:
-            print W+ '[' +R+ 'Bluetooth Client' +W+ ':' +B+ addr +W+ '] [' +G+ 'Name' +W+ ': ' +O+ name +W+ ']'
-            btclients.append(addr)
+            if not args.quiet:
+                print W+ '[' +R+ 'Bluetooth Client' +W+ ':' +B+ addr +W+ '] [' +G+ 'Name' +W+ ': ' +O+ name +W+ ']'
+                btclients.append(addr)
+
+    logger.info(args.delimiter.join(fields))
 
 if __name__=="__main__":
     args = parse_args()
@@ -317,7 +357,8 @@ if __name__=="__main__":
         intf = args.interface
 
     if "mon" not in intf: # yes i know this doesnt work with ubuntu/mint at the mo...
-        print '['+G+'*'+W+'] Setting Wireless card into Monitor Mode'
+        if not args.quiet:
+            print '['+G+'*'+W+'] Setting Wireless card into Monitor Mode'
         if 'mon' not in getWirelessInterfacesList():
             #call(['airmon-ng', 'check', 'kill'], stdout=DN, stderr=DN)
             cmd = ['airmon-ng', 'start' ,intf]
@@ -333,12 +374,14 @@ if __name__=="__main__":
         try:    
             gpsp = GpsPoller() # create the thread
         except Exception, e:
-            print 'Caught exception while running GPS',e
+        	if not args.quiet:
+        	    print 'Caught exception while running GPS',e
 
         try:
             gpsp.start() # start it up
         except Exception, e:
-            print 'Caught exception while running GPS',e
+            if not args.quiet:
+                print 'Caught exception while running GPS',e
             gpsp.running = False
             gpsp.join() # wait for the thread to finish what it's doing
             sys.exit()
@@ -350,17 +393,20 @@ if __name__=="__main__":
 
 # Finish off with Tidy up of CSV. 
 
-print '\n \033[31m%d \033[0mClients | \033[33m%d \033[0mAPs' % (Numclients, Numap)
+if not args.quiet:
+    print '\n \033[31m%d \033[0mClients | \033[33m%d \033[0mAPs' % (Numclients, Numap)
 
 outfile = args.output + '.csv'
 
-print G + '\n Creating CSV' +W+ ': ' + outfile
+if not args.quiet:
+    print G + '\n Creating CSV' +W+ ': ' + outfile
 try:
     with open(args.output, 'rb') as inf, open(outfile, 'wb') as outf:
         outf.writelines(collections.OrderedDict.fromkeys(inf))
 except Exception, e:
-            print R + 'Caught exception while creating CSV File',e
+    if not args.quiet:
+        print R + 'Caught exception while creating CSV File',e
 
 # Print Program Time
-
-print G + '\n Elapsed Time' +W+ ': %s' % (time.time() - start)
+if not args.quiet:
+    print G + '\n Elapsed Time' +W+ ': %s' % (time.time() - start)
