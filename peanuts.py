@@ -308,7 +308,7 @@ def main(intf):
             print 'Caught exception while running sniff()',e
 
 def btscanning():
-	ts = time.time()
+    ts = time.time()
     st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M')
 
     if args.gpstrack:
