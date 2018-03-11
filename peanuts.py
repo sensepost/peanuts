@@ -318,7 +318,15 @@ def btscanning():
         gpslat = "nil"
         gpslong = "nil"
 
-    # Logging info
+    devices = bluetooth.discover_devices(duration=1, lookup_names = True)
+
+    for addr, name in devices:
+        if addr not in btclients:
+            if not args.quiet:
+                print W+ '[' +R+ 'Bluetooth Client' +W+ ':' +B+ addr +W+ '] [' +G+ 'Name' +W+ ': ' +O+ name +W+ ']'
+                btclients.append(addr)
+
+     # Logging info
     fields = []
     fields.append(st) # Log Time
     fields.append('BT') # Log Client or AP
@@ -330,14 +338,6 @@ def btscanning():
     fields.append(gpslong) # Log GPS data
     fields.append(args.location) # Log Location data
     fields.append('nil') # RSSI
-
-    devices = bluetooth.discover_devices(duration=1, lookup_names = True)
-
-    for addr, name in devices:
-        if addr not in btclients:
-            if not args.quiet:
-                print W+ '[' +R+ 'Bluetooth Client' +W+ ':' +B+ addr +W+ '] [' +G+ 'Name' +W+ ': ' +O+ name +W+ ']'
-                btclients.append(addr)
 
     logger.info(args.delimiter.join(fields))
 
