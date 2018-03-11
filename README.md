@@ -85,7 +85,7 @@ python peanuts.py -i wlan0 -l home -a True -g True -o Capture1.csv
 -a Include Access Points too in the results<br />
 -g Get GPS location of your device (Not tested with Nethunter, yet. Also will need GPSD running)<br />
 -o Output file name for the CSV<br />
--b Start Bluetooth sniffing too<br />
+-b Start Bluetooth sniffing too<br /> (make sure you have either bt enabled in vm or a dongle)
 
 
 ## Lets See it in Action
